@@ -20,10 +20,784 @@
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#0b1223,#0f172a 40%);color:var(--text)}
-    /* ...existing code... */
+
+    .app{display:grid;grid-template-columns:320px 1fr;min-height:100vh}
+    .sidebar{padding:24px;position:sticky;top:0;height:100vh;border-right:1px solid #1f2937;background:rgba(17,24,39,.6);backdrop-filter:blur(8px)}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .brand .logo{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#6366f1);display:grid;place-items:center;color:#0b1223;font-weight:800}
+    .brand h1{font-size:18px;margin:0}
+
+    .controls{display:flex;flex-direction:column;gap:12px;margin:16px 0}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;border:1px solid #1f2937;background:#0b1223;color:var(--text);cursor:pointer}
+    .btn:hover{border-color:#334155}
+    .btn.small{padding:8px 10px;border-radius:12px;font-size:12px}
+
+    .picker{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+    .picker .title{font-weight:700}
+
+    .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+    .legend .tag{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1223;border:1px solid #1f2937;font-size:12px;color:var(--muted)}
+    .legend .swatch{width:10px;height:10px;border-radius:999px}
+
+    .content{padding:24px 28px}
+    .calendar{background:rgba(17,24,39,.6);backdrop-filter:blur(8px);border-radius:20px;border:1px solid #1f2937;padding:16px}
+    .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .cal-head h2{margin:0;font-size:18px}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+    .dow{font-size:12px;color:var(--muted);text-align:center;padding:6px 0}
+    .day{border:1px solid var(--grid);border-radius:16px;min-height:120px;background:linear-gradient(180deg,#0b1223,#0c1426);padding:8px;display:grid;grid-template-rows:auto 1fr;gap:4px;position:relative;transition:transform .12s ease}
+    .day:hover{transform:translateY(-2px)}
+    .day .top{display:flex;align-items:center;justify-content:space-between}
+    .day .num{font-size:22px;color:var(--muted);font-weight:700;}
+    .day.today{outline:2px solid var(--ring)}
+    .day.outside{opacity:.45}
+    .mini{display:grid;place-items:center}
+    .mini canvas{width:64px!important;height:64px!important}
+    .chip{position:absolute;bottom:8px;left:8px;font-size:18px;color:var(--muted);font-weight:600;}
+
+    .panel{margin-top:16px;display:grid;grid-template-columns:1.1fr 1fr;gap:16px}
+    .card{border:1px solid #1f2937;background:rgba(17,24,39,.6);backdrop-filter:blur(6px);border-radius:20px;padding:16px}
+    .card h3{margin:0 0 8px 0;font-size:15px}
+    .events{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto}
+    .event{border:1px solid #1f2937;border-left:6px solid var(--accent);padding:10px;border-radius:14px;background:#0b1223}
+    .event .t{font-weight:600}
+    .muted{color:var(--muted)}
+
+    .footer{margin-top:16px;font-size:12px;color:var(--muted)}
+    .link{color:#7dd3fc}
+
+    .popup-details {
+      position: fixed !important;
+      z-index: 2147483647 !important;
+      box-shadow: 0 8px 32px #000a;
+      pointer-events: auto;
+      background: #111827;
+      border: 2px solid #38bdf8;
+      border-radius: 16px;
+      padding: 18px;
+      min-width: 320px;
+      max-width: 420px;
+      color: #e5e7eb;
+      font-size: 15px;
+      display: none;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 1100px){
+      .app{grid-template-columns:1fr}
+      .sidebar{position:relative;height:auto}
+      .panel{grid-template-columns:1fr}
+    }
   </style>
 </head>
 <body>
-<!-- ...existing code... -->
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">Δ</div>
+        <h1>Calendar + Charts</h1>
+      </div>
+
+      <div class="controls">
+        <!-- Campo para URL pública de calendario -->
+        <input id="calendarUrl" type="text" placeholder="Pega aquí la API de tu calendar" style="padding:10px;border-radius:12px;border:1px solid #1f2937;background:#0b1223;color:var(--text);margin-bottom:8px;width:100%" />
+        <button id="loadUrlBtn" class="btn">🌐 Cargar desde URL</button>
+        <div id="loadingSpinner" style="display:none;justify-content:center;align-items:center;margin:12px 0;">
+          <div style="width:36px;height:36px;border:4px solid #38bdf8;border-top:4px solid #111827;border-radius:50%;animation:spin 1s linear infinite;"></div>
+        </div>
+        <style>
+        @keyframes spin { 0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
+        </style>
+        <label class="btn" for="icsInput">📥 Importar .ics (Google Calendar)</label>
+        <input id="icsInput" type="file" accept=".ics,text/calendar" style="display:none" />
+        <button id="resetData" class="btn">🔄 Volver a datos de demo</button>
+        <div class="picker">
+          <button id="prev" class="btn small">◀ Mes</button>
+          <div class="title" id="monthTitle">Mes Año</div>
+          <button id="next" class="btn small">Mes ▶</button>
+        </div>
+      </div>
+
+      <div class="legend" id="legend"></div>
+
+      <div class="footer">
+        Consejos: haga clic en cualquier día para ver el detalle y un gráfico de ocupación por hora. Los círculos muestran la distribución de duración por categoría dentro del día.
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="calendar">
+        <div class="cal-head">
+          <h2 id="rangeTitle">Calendario</h2>
+          <div class="muted" id="stats"></div>
+        </div>
+        <div class="cal-grid" id="dow"></div>
+        <div class="cal-grid" id="grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="card">
+          <h3 id="dayTitle">Seleccioná un día</h3>
+          <div class="events" id="eventList"></div>
+        </div>
+        <div class="card">
+          <h3>Ocupación por hora</h3>
+          <canvas id="hourlyChart" height="220"></canvas>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+<script>
+// ===================== Datos Demo =====================
+let CATEGORY_COLORS = {
+  Reunión: '#60a5fa',     // azul
+  Foco: '#22d3ee',        // cyan
+  Personal: '#f472b6',    // rosa
+  Logística: '#34d399',   // verde
+  Viaje: '#f59e0b'        // ámbar
+};
+
+function generateColor(idx) {
+  // Paleta vibrante, variando el matiz
+  const hue = (idx * 47) % 360;
+  return `hsl(${hue}, 70%, 60%)`;
+}
+
+function updateCategoryColors(events) {
+  const cats = Array.from(new Set(events.map(e => e.category)));
+  CATEGORY_COLORS = {};
+  cats.forEach((cat, idx) => {
+    CATEGORY_COLORS[cat] = generateColor(idx);
+  });
+}
+
+let events = [
+  // Hoy con algunas franjas
+  ev('Revisión sprint','2025-08-14T09:30','2025-08-14T10:30','Reunión'),
+  ev('Bloque de foco','2025-08-14T11:00','2025-08-14T13:00','Foco'),
+  ev('Almuerzo','2025-08-14T13:00','2025-08-14T13:45','Personal'),
+  ev('1:1','2025-08-14T15:00','2025-08-14T15:30','Reunión'),
+  ev('Gimnasio','2025-08-14T19:00','2025-08-14T20:00','Personal'),
+  // Otros días
+  ev('Planificación','2025-08-12T10:00','2025-08-12T12:00','Reunión'),
+  ev('Focus Deep Work','2025-08-12T13:00','2025-08-12T16:00','Foco'),
+  ev('Médico','2025-08-13T08:30','2025-08-13T09:30','Personal'),
+  ev('Logística envíos','2025-08-18T10:00','2025-08-18T11:00','Logística'),
+  ev('Viaje cliente','2025-08-21T07:00','2025-08-21T10:30','Viaje'),
+  ev('Demo mensual','2025-08-28T14:00','2025-08-28T15:00','Reunión')
+];
+
+function ev(title, start, end, category='Reunión'){
+  return { id:crypto.randomUUID(), title, start:new Date(start), end:new Date(end), category };
+}
+
+// ===================== Utilidades =====================
+function fmtDate(d){return d.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}
+function fmtTime(d){return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+function sameDay(a,b){return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate()}
+function minutesBetween(a,b){return (b-a)/60000}
+function clamp(v,min,max){return Math.max(min, Math.min(max, v))}
+
+// ===================== Estado de UI =====================
+let current = new Date(); // mes actual
+let selectedDay = new Date();
+let miniCharts = new Map();
+let hourlyChart; // Chart.js instance
+
+// ===================== Render Legend =====================
+const legendEl = document.getElementById('legend');
+function renderLegend(){
+  legendEl.innerHTML = '';
+  Object.entries(CATEGORY_COLORS).forEach(([k, color])=>{
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.innerHTML = `<span class="swatch" style="background:${color}"></span>${k}`;
+    legendEl.appendChild(tag);
+  })
+}
+renderLegend();
+
+// ===================== Calendario =====================
+const dowNames = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const dowEl = document.getElementById('dow');
+const gridEl = document.getElementById('grid');
+const monthTitle = document.getElementById('monthTitle');
+const rangeTitle = document.getElementById('rangeTitle');
+const statsEl = document.getElementById('stats');
+
+function buildDow(){
+  dowEl.innerHTML = '';
+  dowNames.forEach(n=>{
+    const d = document.createElement('div');
+    d.className='dow';
+    d.textContent = n;
+    dowEl.appendChild(d);
+  })
+}
+
+function monthRange(date){
+  const first = new Date(date.getFullYear(), date.getMonth(), 1);
+  const last = new Date(date.getFullYear(), date.getMonth()+1, 0);
+  // grid inicia en lunes
+  const startOffset = (first.getDay()+6)%7; // 0 para lunes
+  const gridStart = new Date(first);
+  gridStart.setDate(first.getDate() - startOffset);
+  const totalCells = 42; // 6 filas
+  const days = [...Array(totalCells)].map((_,i)=>{
+    const d = new Date(gridStart); d.setDate(gridStart.getDate()+i); return d;
+  });
+  return {first,last,days};
+}
+
+function renderCalendar(){
+  const {first,last,days} = monthRange(current);
+  const monthName = current.toLocaleDateString(undefined,{month:'long', year:'numeric'});
+  monthTitle.textContent = monthName;
+  rangeTitle.textContent = `Vista mensual · ${monthName}`;
+
+  // Stats del mes: total eventos y horas
+  const monthEvents = events.filter(e=> e.start.getMonth()===current.getMonth() && e.start.getFullYear()===current.getFullYear());
+  const totalMin = monthEvents.reduce((s,e)=> s + minutesBetween(e.start,e.end), 0);
+  statsEl.textContent = `${monthEvents.length} eventos · ${(totalMin/60).toFixed(1)} h`;
+
+  gridEl.innerHTML = '';
+  miniCharts.forEach(c=>c.destroy()); miniCharts.clear();
+
+    // Calcular carga horaria diaria para cada semana
+    const weekData = [];
+    for(let w=0; w<6; w++){
+      const weekDays = days.slice(w*7, w*7+7);
+      const carga = weekDays.map(day=>{
+        return events.filter(e=>{
+          const startDay = new Date(e.start.getFullYear(), e.start.getMonth(), e.start.getDate());
+          const endDay = new Date(e.end.getFullYear(), e.end.getMonth(), e.end.getDate());
+          return day >= startDay && day <= endDay;
+        }).reduce((sum,e)=>{
+          // Solo sumar si no es TRANSPARENT
+          if(e.transp==='TRANSPARENT') return sum;
+          const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0);
+          const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59);
+          const start = e.start > dayStart ? e.start : dayStart;
+          const end = e.end < dayEnd ? e.end : dayEnd;
+          return sum + minutesBetween(start, end);
+        },0);
+      });
+      weekData.push(carga);
+    }
+
+    days.forEach((d, idx)=>{
+        const cell = document.createElement('button');
+        cell.className = 'day';
+        if(d.getMonth()!==current.getMonth()) cell.classList.add('outside');
+        if(sameDay(d,new Date())) cell.classList.add('today');
+
+        // Fondo gráfico de área semanal: curva completa, recortada por día
+        const weekIdx = Math.floor(idx/7);
+        const dayIdx = idx%7;
+        const areaCanvas = document.createElement('canvas');
+        areaCanvas.width=cell.offsetWidth || 120;
+        areaCanvas.height=cell.offsetHeight || 40;
+        areaCanvas.style.position='absolute';
+        areaCanvas.style.top='0';
+        areaCanvas.style.left='0';
+        areaCanvas.style.width='100%';
+        areaCanvas.style.height='100%';
+        areaCanvas.style.zIndex='0';
+        areaCanvas.style.opacity='0.18';
+        areaCanvas.style.pointerEvents='none';
+        cell.appendChild(areaCanvas);
+        // Calcular puntos normalizados para toda la semana
+        const maxCarga = Math.max(...weekData[weekIdx]);
+        const points = weekData[weekIdx].map((carga,i)=>{
+          return {
+            x: i*(areaCanvas.width/6),
+            y: maxCarga>0 ? areaCanvas.height-(carga/maxCarga)*areaCanvas.height : areaCanvas.height
+          };
+        });
+        // Dibujar la curva completa, recortar y escalar el segmento para ocupar todo el ancho
+        const ctx = areaCanvas.getContext('2d');
+        ctx.clearRect(0,0,areaCanvas.width,areaCanvas.height);
+        // Calcular el segmento del día
+        const segWidth = areaCanvas.width/7;
+        const xStart = dayIdx*segWidth;
+        const xEnd = (dayIdx+1)*segWidth;
+        // Crear un canvas auxiliar para dibujar la curva completa
+        const auxCanvas = document.createElement('canvas');
+        auxCanvas.width = areaCanvas.width;
+        auxCanvas.height = areaCanvas.height;
+        const auxCtx = auxCanvas.getContext('2d');
+        auxCtx.beginPath();
+        auxCtx.moveTo(points[0].x,areaCanvas.height);
+        for(let i=0;i<points.length;i++){
+          auxCtx.lineTo(points[i].x,points[i].y);
+        }
+        auxCtx.lineTo(points[points.length-1].x,areaCanvas.height);
+        auxCtx.closePath();
+        auxCtx.fillStyle='#60a5fa';
+        auxCtx.globalAlpha=0.7;
+        auxCtx.fill();
+        // Tomar solo el segmento del día y escalarlo al ancho total
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0,0,areaCanvas.width,areaCanvas.height);
+        ctx.clip();
+        ctx.drawImage(
+          auxCanvas,
+          xStart,0,segWidth,areaCanvas.height, // origen
+          0,0,areaCanvas.width,areaCanvas.height // destino (escalado)
+        );
+        ctx.restore();
+
+        const top = document.createElement('div');
+        top.className='top';
+        const num = document.createElement('div'); num.className='num'; num.textContent=d.getDate();
+        top.appendChild(num);
+        cell.appendChild(top);
+
+        const mini = document.createElement('div'); mini.className='mini';
+        const canvas = document.createElement('canvas');
+        canvas.width=64; canvas.height=64; mini.appendChild(canvas); cell.appendChild(mini);
+
+        // ...existing code...
+        let evs = events.filter(e=> {
+          const startDay = new Date(e.start.getFullYear(), e.start.getMonth(), e.start.getDate());
+          const endDay = new Date(e.end.getFullYear(), e.end.getMonth(), e.end.getDate());
+          return d >= startDay && d <= endDay;
+        });
+        evs = evs.sort((a,b)=> a.start-b.start);
+        // ...existing code...
+        // Calcular minutos por título SOLO para la franja del día actual
+        const minsByTitle = {};
+        evs.forEach(e=>{
+            const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
+            const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+            const start = e.start > dayStart ? e.start : dayStart;
+            const end = e.end < dayEnd ? e.end : dayEnd;
+            const m = minutesBetween(start, end);
+            minsByTitle[e.title] = (minsByTitle[e.title]||0)+m;
+        });
+        const labels = Object.keys(minsByTitle);
+        const values = Object.values(minsByTitle);
+        // Generar colores dinámicamente para los eventos del día
+        const colors = labels.map((_, idx) => {
+            const hue = (idx * 47) % 360;
+            return `hsl(${hue}, 70%, 60%)`;
+        });
+
+        // ...existing code...
+        const popup = document.createElement('div');
+        popup.className = 'popup-details';
+        popup.style.display = 'none';
+        popup.style.position = 'absolute';
+        popup.style.zIndex = '1000';
+        popup.style.background = '#111827';
+        popup.style.border = '2px solid #38bdf8';
+        popup.style.borderRadius = '16px';
+        popup.style.padding = '18px';
+        popup.style.boxShadow = '0 4px 24px #0008';
+        popup.style.minWidth = '320px';
+        popup.style.maxWidth = '420px';
+        popup.style.color = '#e5e7eb';
+        popup.innerHTML = `<h3>Eventos del día</h3>`;
+        if(evs.length){
+          evs.forEach(e=>{
+            let participantes = '';
+            if(e.attendee && Array.isArray(e.attendee) && e.attendee.length){
+              participantes = e.attendee.map(a=>`<li>${a}</li>`).join('');
+            }
+            popup.innerHTML += `<div style='margin-bottom:12px;border-left:6px solid ${colors[labels.indexOf(e.title)]};padding-left:8px;'>
+              <span style='font-size:22px;font-weight:700;color:#38bdf8;display:block;margin-bottom:2px;'>${e.title}</span><br>
+              <span>${e.location||''}</span><br>
+              <span>${e.category||''}</span><br>
+              <span>${e.transp==='TRANSPARENT'?'Disponible':'Ocupado'}</span><br>
+              <span><b>Organizador:</b> ${e.organizer||''}</span><br>
+              <span>${e.description||''}</span><br>
+              <span>${e.start.toLocaleString()} - ${e.end.toLocaleString()}</span><br>
+              <b>Participantes:</b><ul style='max-height:120px;overflow-y:auto;'>${participantes}</ul>
+              ${e.hangoutLink ? `<div><a href='${e.hangoutLink}' target='_blank' style='color:#388e3c;font-weight:bold;'>Enlace de videollamada</a></div>` : ''}
+            </div>`;
+          });
+        }else{
+          popup.innerHTML += '<i>No hay eventos este día</i>';
+        }
+        document.body.appendChild(popup);
+
+        // ...existing code...
+        if(values.length){
+            const doughnut = new Chart(canvas.getContext('2d'),{
+                type:'doughnut',
+                data:{labels, datasets:[{data:values, backgroundColor:colors, borderWidth:0} ]},
+                options:{
+                    plugins:{legend:{display:false}, tooltip:{enabled:false}},
+                    cutout:'70%',
+                    events:[]
+                }
+            });
+            miniCharts.set(canvas, doughnut);
+        }else{
+            // dibujar círculo tenue vacío
+            const ctx2 = canvas.getContext('2d');
+            ctx2.globalAlpha=0.25; ctx2.beginPath(); ctx2.arc(32,32,22,0,Math.PI*2); ctx2.strokeStyle='#334155'; ctx2.lineWidth=6; ctx2.stroke();
+        }
+
+        // ...existing code...
+        const chip = document.createElement('div'); chip.className='chip';
+        chip.textContent = evs.length ? `${evs.length} evt · ${(values.reduce((a,b)=>a+b,0)/60).toFixed(1)}h` : '—';
+        cell.appendChild(chip);
+
+        // ...existing code...
+        mini.addEventListener('click', (e)=>{
+          popup.style.display = 'block';
+          popup.style.maxHeight = (window.innerHeight - 40) + 'px';
+          popup.style.overflowY = 'auto';
+          popup.style.zIndex = '2147483647';
+          const rect = mini.getBoundingClientRect();
+          const popupWidth = popup.offsetWidth || 400;
+          const popupHeight = popup.offsetHeight || 300;
+          let left = rect.left + window.scrollX;
+          let top = rect.bottom + window.scrollY + 8;
+          if(left + popupWidth > window.innerWidth) left = window.innerWidth - popupWidth - 20;
+          if(top + popupHeight > window.innerHeight) top = window.innerHeight - popupHeight - 20;
+          if(left < 0) left = 10;
+          if(top < 0) top = 10;
+          popup.style.left = left + 'px';
+          popup.style.top = top + 'px';
+        });
+        document.addEventListener('mousedown', (ev)=>{
+          if(!popup.contains(ev.target) && !mini.contains(ev.target)){
+            popup.style.display = 'none';
+          }
+        });
+        cell.addEventListener('click',()=> selectDay(d));
+        gridEl.appendChild(cell);
+    });
+}
+
+// ===================== Panel lateral del día =====================
+const dayTitle = document.getElementById('dayTitle');
+const eventList = document.getElementById('eventList');
+
+function selectDay(d){
+  selectedDay = d;
+  dayTitle.textContent = fmtDate(d);
+  // Incluir eventos que abarcan el día seleccionado
+        const evs = events.filter(e => {
+      const startDay = new Date(e.start.getFullYear(), e.start.getMonth(), e.start.getDate());
+      const endDay = new Date(e.end.getFullYear(), e.end.getMonth(), e.end.getDate());
+      return d >= startDay && d <= endDay;
+    }).sort((a,b)=> a.start-b.start);
+    eventList.innerHTML = evs.length? '' : '<div class="muted">Sin eventos</div>';
+
+        // Generar colores dinámicos por título para los eventos del día
+        const labels = evs.map(e => e.title);
+        const uniqueTitles = Array.from(new Set(labels));
+        const colors = uniqueTitles.map((_, idx) => {
+            const hue = (idx * 47) % 360;
+            return `hsl(${hue}, 70%, 60%)`;
+        });
+        // Mapear título a color
+        const titleColorMap = {};
+        uniqueTitles.forEach((t, idx) => { titleColorMap[t] = colors[idx]; });
+
+        evs.forEach(e => {
+            // Calcular inicio y fin para el día seleccionado
+            const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
+            const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+            const start = e.start > dayStart ? e.start : dayStart;
+            const end = e.end < dayEnd ? e.end : dayEnd;
+            const m = Math.round(minutesBetween(start, end));
+            const item = document.createElement('div');
+            item.className='event';
+            item.style.borderLeftColor = titleColorMap[e.title];
+            item.innerHTML = `<div class="t">${e.title}</div>
+              <div class="muted">${fmtTime(start)}–${fmtTime(end)} · ${(m/60).toFixed(1)} h</div>`;
+            eventList.appendChild(item);
+        });
+
+        renderHourlyChart(evs, d, titleColorMap);
+
+  renderHourlyChart(evs, d);
+}
+
+function renderHourlyChart(evs){
+  // 24 bins de 60 min: sumar minutos ocupados por franja SOLO para el día seleccionado
+  const bins = new Array(24).fill(0);
+  const day = arguments.length > 1 ? arguments[1] : selectedDay;
+  evs.forEach(e=>{
+    // Si el evento es TRANSPARENT, no sumar ocupación
+    if(e.transp === 'TRANSPARENT') return;
+    // Calcular inicio y fin para el día seleccionado
+    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0);
+    const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59);
+    const s = e.start > dayStart ? e.start : dayStart;
+    const en = e.end < dayEnd ? e.end : dayEnd;
+    for(let h=0; h<24; h++){
+      const binStart = new Date(day); binStart.setHours(h,0,0,0);
+      const binEnd = new Date(day); binEnd.setHours(h+1,0,0,0);
+      const overlap = Math.max(0, Math.min(en,binEnd) - Math.max(s,binStart));
+      bins[h] += overlap/60000; // minutos
+    }
+  });
+  const ctx = document.getElementById('hourlyChart').getContext('2d');
+  if(hourlyChart) hourlyChart.destroy();
+  hourlyChart = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:[...Array(24)].map((_,i)=> i.toString().padStart(2,'0')+':00'),
+      datasets:[{label:'min ocupados', data:bins, backgroundColor:'#38bdf8'}]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'#0b1223'}},
+        y:{grid:{color:'#0b1223'}, suggestedMax:60, ticks:{callback:v=>v+'m'}}
+      }
+    }
+  });
+}
+
+// ===================== Importar ICS =====================
+const icsInput = document.getElementById('icsInput');
+icsInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const text = await file.text();
+  importarICS(text);
+})
+
+// Nueva funcionalidad: cargar desde URL pública
+const loadUrlBtn = document.getElementById('loadUrlBtn');
+loadUrlBtn.addEventListener('click', async ()=>{
+  const spinner = document.getElementById('loadingSpinner');
+  spinner.style.display = 'flex';
+  const url = document.getElementById('calendarUrl').value.trim();
+  if(!url){
+    alert('Por favor, ingresa una URL de endpoint que devuelva JSON');
+    return;
+  }
+  try{
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('No se pudo descargar el calendario');
+    const contentType = resp.headers.get('content-type');
+    if(contentType && contentType.includes('application/json')){
+      const data = await resp.json();
+      if(data.items && Array.isArray(data.items)){
+        // Convertir eventos JSON al formato interno
+        events = data.items.map(ev => {
+          // Manejar eventos all-day (solo fecha)
+          let start, end;
+          if(ev.start?.date){
+            start = new Date(ev.start.date);
+          }else{
+            start = new Date(ev.start?.dateTime || ev.start);
+          }
+          if(ev.end?.date){
+            end = new Date(ev.end.date);
+            // Sumar un día para incluir el último día completo
+            end.setDate(end.getDate());
+          }else{
+            end = new Date(ev.end?.dateTime || ev.end);
+          }
+          return {
+            id: ev.id || crypto.randomUUID(),
+            title: ev.summary || 'Evento',
+            start,
+            end,
+            category: ev.eventType || ev.status || 'Reunión',
+            location: ev.location || '',
+            description: ev.description || '',
+            organizer: (ev.creator?.email || ''),
+            attendee: (ev.attendees||[]).map(a => (a.displayName ? `${a.displayName} (${a.email})` : a.email)),
+            transp: ev.transparency === 'transparent' ? 'TRANSPARENT' : '',
+            hangoutLink: ev.hangoutLink || (ev.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri) || ''
+          };
+        });
+        updateCategoryColors(events);
+        renderLegend();
+        renderCalendar();
+        // seleccionar primer día con eventos
+        if(events.length) selectDay(events[0].start);
+      }else{
+        alert('El JSON no tiene el formato esperado (debe tener items[])');
+      }
+    }else{
+      // Si no es JSON, intentar como ICS
+      const text = await resp.text();
+      importarICS(text);
+    }
+  }catch(err){
+    alert('Error al cargar el calendario: '+err.message);
+  }
+  spinner.style.display = 'none';
+});
+
+function importarICS(text){
+  const imported = parseICS(text);
+  if(imported.length){
+    events = imported;
+    updateCategoryColors(events);
+    renderLegend();
+    renderCalendar();
+    // seleccionar primer día con eventos
+    const firstDay = imported[0].start;
+    selectDay(firstDay);
+  } else {
+    alert('No se encontraron eventos en el archivo .ics');
+  }
+}
+
+function parseICS(text){
+  // Unir líneas continuadas (que empiezan con espacio o tabulación)
+  let rawLines = text.replace(/\r/g,'').split('\n');
+  const lines = [];
+  for(let i=0; i<rawLines.length; i++){
+    let line = rawLines[i];
+    while(i+1 < rawLines.length && (/^[ \t]/.test(rawLines[i+1]))){
+      line += rawLines[i+1].slice(1); // unir sin el espacio/tab
+      i++;
+    }
+    lines.push(line);
+  }
+  const out = [];
+  let cur = null;
+  // Detectar zona horaria principal del calendario
+  let mainTz = 'America/Argentina/Buenos_Aires';
+  for(const line of lines){
+    if(line.startsWith('X-WR-TIMEZONE:')) mainTz = line.split(':')[1].trim();
+  }
+  // Función para parsear fechas con o sin TZID
+  const getDate = (raw, tzid)=>{
+    // Soporte para eventos all-day (sin hora)
+    let value = raw;
+    let tz = tzid || mainTz;
+    // Si es all-day: solo fecha, sin hora
+    const mAllDay = value.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if(mAllDay){
+      const [_,Y,Mo,D] = mAllDay;
+      // Día completo, desde las 00:00
+      return new Date(+Y, +Mo-1, +D, 0, 0, 0);
+    }
+    // Si termina en Z, es UTC
+    if(/Z$/.test(value)){
+      const m = value.match(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/);
+      if(!m) return new Date();
+      const [_,Y,Mo,D,h,mi,s] = m;
+      const utcDate = new Date(Date.UTC(+Y, +Mo-1, +D, +h, +mi, +s));
+      return new Date(utcDate.toLocaleString('en-US', {timeZone: tz}));
+    }
+    // Si tiene formato sin segundos
+    const m = value.match(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+    if(m){
+      const [_,Y,Mo,D,h,mi] = m;
+      return new Date(+Y, +Mo-1, +D, +h, +mi);
+    }
+    // Si tiene formato con segundos
+    const m2 = value.match(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+    if(m2){
+      const [_,Y,Mo,D,h,mi,s] = m2;
+      return new Date(+Y, +Mo-1, +D, +h, +mi, +s);
+    }
+    return new Date(value);
+  }
+  for(const line of lines){
+    if(line.startsWith('BEGIN:VEVENT')) cur = {};
+    else if(line.startsWith('END:VEVENT')){
+      if(cur.DTSTART && cur.DTEND){
+        // Detectar TZID en la clave
+        let tzidStart = null, tzidEnd = null;
+        if(cur.DTSTART && cur.DTSTART.startsWith('TZID=')){
+          tzidStart = cur.DTSTART.split(':')[0].split('TZID=')[1];
+          cur.DTSTART = cur.DTSTART.split(':')[1];
+        }
+        if(cur.DTEND && cur.DTEND.startsWith('TZID=')){
+          tzidEnd = cur.DTEND.split(':')[0].split('TZID=')[1];
+          cur.DTEND = cur.DTEND.split(':')[1];
+        }
+        // Parsear participantes ATTENDEE
+        let attendees = [];
+        if(cur.ATTENDEE){
+          const attRaw = Array.isArray(cur.ATTENDEE) ? cur.ATTENDEE : [cur.ATTENDEE];
+          attendees = attRaw.map(a=>{
+            // Buscar CN y mailto, cubriendo variantes y espacios
+            let nombre = '';
+            let mail = '';
+            // CN puede estar como parámetro separado por ; o :
+            const cnMatch = a.match(/CN=([^;:]+)[;:]?/i);
+            if(cnMatch) nombre = cnMatch[1].replace(/\\n/g,'').replace(/\n/g,'').replace(/\s+/g,' ').replace(/\r/g,'').replace(/\t/g,'').trim();
+            // mailto puede estar al final o en medio
+            const mailMatch = a.match(/mailto:([^\s;>]+)/i);
+            if(mailMatch) mail = mailMatch[1].trim();
+            // Si no se encuentra CN, intentar extraer entre ; y mailto
+            if(!nombre && a.includes('mailto:')){
+              const beforeMail = a.split('mailto:')[0];
+              const altCN = beforeMail.match(/([^;:]+)$/);
+              if(altCN) nombre = altCN[1].trim();
+            }
+            if(nombre && mail) return `${nombre} (${mail})`;
+            if(nombre) return nombre;
+            if(mail) return mail;
+            return a;
+          });
+        }
+        // Parsear ORGANIZER
+        let organizerName = '';
+        let organizerMail = '';
+        if(cur.ORGANIZER){
+          const cnMatch = cur.ORGANIZER.match(/CN=([^;:]+)[;:]?/i);
+          const mailMatch = cur.ORGANIZER.match(/mailto:([^\s>]+)/i);
+          organizerName = cnMatch ? cnMatch[1].replace(/\\n/g,'').replace(/\n/g,'').replace(/\s+/g,' ').replace(/\r/g,'').replace(/\t/g,'').trim() : '';
+          organizerMail = mailMatch ? mailMatch[1].trim() : '';
+        }
+        out.push({
+          id: crypto.randomUUID(),
+          title: cur.SUMMARY || 'Evento',
+          start: getDate(cur.DTSTART, tzidStart),
+          end: getDate(cur.DTEND, tzidEnd),
+          category: (cur.CATEGORIES||'Reunión').split(',')[0],
+          transp: (cur.TRANSPARENT || cur.TRANSPARENCY || cur.TRANSP || '').toUpperCase(),
+          attendee: attendees,
+          organizer: organizerName && organizerMail ? `${organizerName} (${organizerMail})` : organizerMail || organizerName || cur.ORGANIZER,
+          location: cur.LOCATION || '',
+          description: (cur.DESCRIPTION || '').replace(/\\n/g,' ').replace(/\n/g,' ').replace(/\r/g,' ').replace(/\t/g,' ').replace(/\s+/g,' ').trim()
+        })
+      }
+      cur=null;
+    } else if(cur){
+      const idx = line.indexOf(':');
+      if(idx>0){
+        const key = line.slice(0,idx).split(';')[0];
+        const val = line.slice(idx+1);
+        // Si es ATTENDEE, guardar como array
+        if(key==='ATTENDEE'){
+          if(!cur.ATTENDEE) cur.ATTENDEE=[];
+          cur.ATTENDEE.push(val); // Solo el valor después de los dos puntos
+        }else{
+          cur[key]=val;
+        }
+      }
+    }
+  }
+  // ordenar por fecha
+  out.sort((a,b)=> a.start-b.start);
+  return out;
+}
+
+// ===================== Navegación =====================
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+prevBtn.onclick = ()=>{ current.setMonth(current.getMonth()-1); renderCalendar(); };
+nextBtn.onclick = ()=>{ current.setMonth(current.getMonth()+1); renderCalendar(); };
+
+// Reset a demo
+const resetBtn = document.getElementById('resetData');
+resetBtn.onclick = ()=>{ location.reload(); };
+
+// Inicialización
+buildDow();
+renderCalendar();
+selectDay(new Date());
+</script>
 </body>
 </html>
