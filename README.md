@@ -26,7 +26,7 @@ Visualizador de calendario avanzado con gráficos interactivos y análisis de ca
 
 ## Ejemplo visual
 
-![Ejemplo de calendario con gráficos](https://raw.githubusercontent.com/elgitdemarce/mi-calendar/main/demo-screenshot.png)
+> *Agrega aquí tu propio screenshot del calendario para mostrar el ejemplo visual.*
 
 ## Tecnologías utilizadas
 
