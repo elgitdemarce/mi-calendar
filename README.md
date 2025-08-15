@@ -26,7 +26,7 @@ Visualizador de calendario avanzado con gráficos interactivos y análisis de ca
 
 ## Ejemplo visual
 
-> *Agrega aquí tu propio screenshot del calendario para mostrar el ejemplo visual.*
+![Ejemplo de calendario con gráficos](public/micalendarexample.png)
 
 ## Tecnologías utilizadas
 
