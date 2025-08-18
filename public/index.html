@@ -117,6 +117,7 @@
           <div class="title" id="monthTitle">Mes Año</div>
           <button id="next" class="btn small">Mes ▶</button>
         </div>
+      <div id="disponibilidadDia" style="margin-top:10px;font-size:14px;color:var(--muted);background:#0b1223;border-radius:10px;padding:10px 12px;"></div>
       </div>
 
       <div class="legend" id="legend"></div>
@@ -520,6 +521,73 @@ function selectDay(d){
         renderHourlyChart(evs, d, titleColorMap);
 
   renderHourlyChart(evs, d);
+
+  // Calcular intervalos libres en la banda de 09:00 a 18:00
+  const bandaInicio = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0, 0);
+  const bandaFin = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 18, 0, 0);
+  // Obtener eventos ocupados en la banda (excluyendo TRANSPARENT)
+  const ocupados = evs.filter(e => e.transp !== 'TRANSPARENT')
+    .map(e => ({
+      start: e.start > bandaInicio ? e.start : bandaInicio,
+      end: e.end < bandaFin ? e.end : bandaFin
+    }))
+    .filter(e => e.end > e.start)
+    .sort((a,b) => a.start - b.start);
+
+  // Unir eventos solapados
+  const merged = [];
+  ocupados.forEach(ev => {
+    if(!merged.length || merged[merged.length-1].end < ev.start){
+      merged.push({...ev});
+    }else{
+      merged[merged.length-1].end = new Date(Math.max(merged[merged.length-1].end, ev.end));
+    }
+  });
+
+  // Calcular intervalos libres
+  const libres = [];
+  let prev = bandaInicio;
+  merged.forEach(ev => {
+    if(ev.start > prev){
+      libres.push([new Date(prev), new Date(ev.start)]);
+    }
+    prev = new Date(Math.max(prev, ev.end));
+  });
+  if(prev < bandaFin){
+    libres.push([new Date(prev), new Date(bandaFin)]);
+  }
+
+  // Segmentar intervalos libres en bloques de 30 minutos
+  let bloques = [];
+  libres.forEach(([ini,fin]) => {
+    let start = new Date(ini);
+    while(start < fin){
+      let end = new Date(start.getTime() + 30*60000);
+      if(end > fin) end = new Date(fin);
+      if(end > start){
+        bloques.push([new Date(start), new Date(end)]);
+      }
+      start = end;
+    }
+  });
+
+  // Formatear los bloques como etiquetas visuales
+  const etiquetas = bloques.length ? bloques.map(([ini,fin]) => {
+    return `<span class='tag' style='margin:2px 4px 2px 0;display:inline-flex;align-items:center;background:#0b1223;border:1px solid #1f2937;color:var(--text);font-size:13px;padding:6px 12px;border-radius:999px;'>
+      <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:7px;"></span>${fmtTime(ini)} - ${fmtTime(fin)}</span>`;
+  }).join('') : '<span class="muted">Sin disponibilidad</span>';
+
+  // Calcular horas libres y ocupadas
+  const minutosLibres = bloques.reduce((acc,[ini,fin])=> acc + (fin-ini)/60000, 0);
+  const minutosOcupados = merged.reduce((acc,ev)=> acc + (ev.end-ev.start)/60000, 0);
+  const horasDispBanda = (minutosLibres/60).toFixed(2);
+
+  const disponibilidadEl = document.getElementById('disponibilidadDia');
+  disponibilidadEl.innerHTML = `<b>Disponibilidad 09-18:</b> ${horasDispBanda} h libres` + (minutosOcupados > 0 ? ` <span style='font-size:12px;'>(ocupadas: ${(minutosOcupados/60).toFixed(2)} h)</span>` : '') + `<div style='margin-top:6px;display:flex;flex-wrap:wrap;gap:2px;'>${etiquetas}</div>`;
+
+  // Eliminar la leyenda de categorías debajo de la disponibilidad horaria si existe
+  const legendEl = document.getElementById('legend');
+  if (legendEl) legendEl.style.display = 'none';
 }
 
 function renderHourlyChart(evs){
